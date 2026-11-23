@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lipto & Дипр-ЛПТ</title>
+<style>
+  body{margin:0;font-family:sans-serif;background:#0b0e14;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;text-align:center}
+  .app{background:#151a24;width:92%;max-width:360px;border-radius:14px;border:1px solid #00f2fe;padding:15px}
+  .btn{width:100%;background:#00f2fe;color:#000;border:0;padding:10px;border-radius:6px;font-weight:bold;cursor:pointer;margin-top:6px}
+  .vip{background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000}
+  .out{background:none;border:1px solid #00f2fe;color:#00f2fe}
+  .sm{width:auto;padding:5px 9px;font-size:12px;margin:2px}
+  input,select{width:92%;padding:9px;margin:5px 0;border-radius:6px;border:1px solid #333;background:#0b0e14;color:#fff;text-align:center;font-family:monospace}
+  .tabs{display:flex;gap:5px;margin-top:12px}
+  .card{background:#0b0e14;border:1px solid #222;padding:8px;border-radius:8px;margin-top:8px}
+  .card.v{border-color:#fbbf24}
+  .card img{width:100%;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="auth">
+    <h3 style="color:#00f2fe;margin:0 0 8px">LIPTO & ДИПР-ЛПТ</h3>
+    <p style="font-size:12px;color:#888;margin:0 0 8px">Введите код доступа или сгенерируйте новый:</p>
+    <input id="cIn" placeholder="LPT-XXXX-XXXX-0000">
+    <button class="btn" onclick="log()">Войти по коду</button>
+    <button class="btn out" onclick="genAuthCode()">✨ Сгенерировать код</button>
+  </div>
+
+  <div id="main" style="display:none">
+    <div style="display:flex;justify-content:space-around;background:#0b0e14;padding:8px;border-radius:8px;margin-bottom:8px">
+      <div><small style="color:#888">LIPTO</small><div id="b1" style="color:#00f2fe;font-weight:bold;font-size:18px">0</div></div>
+      <div><small style="color:#fbbf24">👑 ДИПР-ЛПТ</small><div id="b2" style="color:#fbbf24;font-weight:bold;font-size:18px">0</div></div>
+    </div>
+
+    <div id="t1"><div id="srvs"></div></div>
+
+    <div id="t2" style="display:none">
+      <select id="cType">
+        <option value="LPT">Обычная: $LIPTO</option>
+        <option value="VIP">👑 VIP-крипта: Дипр-ЛПТ</option>
+      </select>
+      <input id="amt" type="number" placeholder="Сумма монет">
+      <button class="btn vip" onclick="mkCell()">Создать ячейку (фото + номер)</button>
+      <div id="cList"></div>
+      <input id="opn" placeholder="Номер CELL-... или VIP-...">
+      <button class="btn out" onclick="actCell(opn.value)">Активировать номер</button>
+    </div>
+
+    <div id="t3" style="display:none">
+      <div id="myC" onclick="cp(this.innerText)" style="padding:10px;border:1px dashed #00f2fe;color:#00f2fe;font-family:monospace;margin:10px 0;cursor:pointer"></div>
+      <button class="btn out" onclick="localStorage.removeItem('lpt_v4');location.reload()">Выйти</button>
+    </div>
+
+    <div class="tabs">
+      <button class="btn sm" style="flex:1" onclick="tab(1)">🖥 Серверы</button>
+      <button class="btn sm" style="flex:1" onclick="tab(2)">🖼 Ячейки</button>
+      <button class="btn sm" style="flex:1" onclick="tab(3)">🔑 Кошелек</button>
+    </div>
+  </div>
+</div>
+<canvas id="cv" width="400" height="160" style="display:none"></canvas>
+<script>
+  const sgn=s=>s.split('').reduce((a,c)=>a+c.charCodeAt(0),0)*7%8999+1000;
+  const rnd=()=>Math.random().toString(36).slice(2,6).toUpperCase();
+  const ok=c=>{const p=(c||'').trim().toUpperCase().split('-');return p.length===4&&p[0]==='LPT'&&+p[3]===sgn(`${p[1]}-${p[2]}`);};
+  const SRV=[{n:"RU-01 (Base)",l:1,d:0},{n:"EU-02 (Fast)",l:2,d:0},{n:"👑 VIP-ДИПР",l:3,d:1}];
+  let u=JSON.parse(localStorage.getItem('lpt_v4'));
+
+  function genAuthCode(){
+    const b=`${rnd()}-${rnd()}`;
+    cIn.value=`LPT-${b}-${sgn(b)}`;
+  }
+
+  function save(){
+    auth.style.display='none';main.style.display='block';
+    b1.innerText=u.bal+' $LIPTO';b2.innerText=u.dipr+' $DIPR';myC.innerText=u.code;
+    srvs.innerHTML=SRV.map((x,i)=>`<div class="card ${x.d?'v':''}" style="display:flex;justify-content:space-between;align-items:center"><span><b>${x.n}</b><br><small style="color:#888">+${x.l} LPT ${x.d?'+'+x.d+' ДИПР':''}/5с</small></span><button class="btn sm ${u.s===i?(x.d?'vip':''):'out'}" onclick="u.s=${i};save()">${u.s===i?'Активен':'Выбрать'}</button></div>`).join('');
+    cList.innerHTML=u.cells.map((c,i)=>`<div class="card ${c.vip?'v':''}"><img src="${c.img}"><div style="font-family:monospace;color:${c.vip?'#fbbf24':'#00f2fe'};font-size:12px;margin:4px 0">${c.num}</div><button class="btn sm out" onclick="cp('${c.num}')">Копировать</button><button class="btn sm ${c.vip?'vip':''}" onclick="unp(${i})">Распаковать</button></div>`).join('');
+    localStorage.setItem('lpt_v4',JSON.stringify(u));
+  }
+
+  function log(){
+    const c=cIn.value.trim().toUpperCase();
+    if(!ok(c))return alert('Неверный код доступа!');
+    const isVip=c.includes('VIP');
+    u={code:c,bal:isVip?500:100,dipr:isVip?50:10,s:isVip?2:0,cells:[],used:[]};
+    save();
+  }
+
+  function mkImg(num,amt,vip){
+    const x=cv.getContext('2d'),col=vip?'#fbbf24':'#00f2fe';
+    x.fillStyle=vip?'#1a1408':'#0b0e14';x.fillRect(0,0,400,160);x.strokeStyle=col;x.lineWidth=3;x.strokeRect(4,4,392,152);
+    x.beginPath();x.arc(70,80,42,0,7);x.fillStyle=col;x.fill();x.fillStyle='#0b0e14';x.font='bold 16px sans-serif';x.fillText(vip?'ДИПР':'LIPTO',47,86);
+    x.fillStyle='#fff';x.font='bold 24px sans-serif';x.fillText(amt+(vip?' ДИПР-ЛПТ':' $LIPTO'),130,68);
+    x.fillStyle=col;x.font='bold 14px monospace';x.fillText(num,130,110);
+    return cv.toDataURL();
+  }
+
+  function mkCell(){
+    const a=Math.floor(+amt.value),vip=cType.value==='VIP';
+    if(a<=0||(vip?a>u.dipr:a>u.bal))return alert('Недостаточно монет');
+    vip?u.dipr-=a:u.bal-=a;
+    const id=rnd(),pref=vip?'VIP':'CELL',num=`${pref}-${id}-${a}-${sgn(id+a)}`;
+    u.cells.unshift({num,amt:a,vip,img:mkImg(num,a,vip)});amt.value='';save();
+  }
+
+  function unp(i){const c=u.cells[i];c.vip?u.dipr+=c.amt:u.bal+=c.amt;u.used.push(c.num);u.cells.splice(i,1);save();}
+
+  function actCell(raw){
+    const c=(raw||'').trim().toUpperCase(),p=c.split('-'),vip=p[0]==='VIP';
+    if(p.length!==4||(p[0]!=='CELL'&&!vip)||+p[3]!==sgn(p[1]+p[2]))return alert('Неверный номер ячейки');
+    if(u.used.includes(c)||u.cells.some(x=>x.num===c))return alert('Эта ячейка уже открыта');
+    vip?u.dipr+=+p[2]:u.bal+=+p[2];u.used.push(c);opn.value='';save();
+    alert('Ячейка активирована!');
+  }
+
+  function tab(n){[t1,t2,t3].forEach((e,i)=>e.style.display=i+1===n?'block':'none');}
+  const cp=t=>{navigator.clipboard.writeText(t);alert('Скопировано');};
+  setInterval(()=>{if(u){const s=SRV[u.s];u.bal+=s.l;u.dipr+=s.d;save();}},5000);
+  if(u&&ok(u.code))save();
+</script>
+</body>
+</html>
